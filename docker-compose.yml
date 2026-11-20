@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: payments-postgres
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # healthcheck runs pg_isready every 5s so docker knows when postgres is actually ready
+    # to accept connections, not just when the container has started. Those are two different moments
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payments"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: payments-redis
+    ports:
+      - "6379:6379"
+
+  # the -js flag turns on jetstream, its persistence layer which keeps events in streams
+  # until consumers have processed them
+  # -m 8222 turns on the monitoring endpoint
+  nats:
+    image: nats:2.11-alpine
+    container_name: payments-nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+volumes:
+  pgdata:
